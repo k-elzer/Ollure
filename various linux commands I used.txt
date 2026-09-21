@@ -1,0 +1,81 @@
+
+# curl commands for testing session id stuff (from inside the cloud host):
+
+curl --header "Content-Type: application/json" --request POST --data '{"model":"localtest1","from":"llama3.1:70b"}' http://localhost:11434/api/create
+curl --header "Content-Type: application/json" --request POST --data '{"source":"llama3.1:70b","destination":"test1:latest"}' http://localhost:11434/api/copy
+
+curl http://localhost:11434/api/tags
+
+
+# curl commands for testing session id stuff (from outside the cloud host):
+
+curl --header "Content-Type: application/json" --request POST --data "{\"model\":\"adevtest1\",\"from\":\"llama3.1:70b\"}" http://18.192.3.141:11434/api/create
+curl --header "Content-Type: application/json" --request POST --data "{\"source\":\"llama3.1:70b\",\"destination\":\"test1:latest\"}" http://18.192.3.141:11434/api/copy
+
+curl http://localhost:11434/api/tags
+
+
+
+# NMAP commands used to scan own IP addresses:
+
+### AWS EC2 instances:
+nmap -sSU -sV -O -Pn 3.71.26.107
+nmap -sSU -sV -O -Pn 18.192.3.141
+
+### DigitalOcean Droplets:
+nmap -sSU -sV -O -Pn 157.230.107.47
+nmap -sSU -sV -O -Pn 165.245.213.213
+
+
+
+
+
+#   COMMANDS TO RUN WHEN SETTING UP A NEW VM:
+### (printed by ChatGPT for me, but essentially the commands I ended up using all the time!)
+
+# Update
+apt update && apt upgrade -y
+
+# Install Docker
+apt install -y docker.io
+systemctl enable docker
+systemctl start docker
+
+# Add group:
+sudo getent group honeypotlogs || sudo groupadd -g 20001 honeypotlogs
+
+# Change to root user (using `sudo -i` or `sudo su -`) and run the following:
+sudo visudo
+# Now add:
+<username> ALL=(ALL) NOPASSWD: ALL
+## REMEMBER TO CHANGE <username> TO THE USERNAME OF THE MAIN USER OF THE VM (e.g., "ubuntu" or "hpu")
+
+
+# Add user
+adduser --disabled-password --gecos "" honeypotlogs
+usermod -aG docker honeypotlogs
+------- OR -------
+sudo id -u honeypotlogs >/dev/null 2>&1 || sudo useradd -u 20001 -g 20001 -M -d /home/honeypotlogs -s /usr/sbin/nologin honeypotlogs
+
+# Create log directory
+mkdir -p /home/<username>/honey-llm-logs
+sudo chown -R honeypotlogs:honeypotlogs /home/<username>/honey-llm-logs
+
+# Set ownerships and `chmod` commands (REMEMBER TO CHANGE USERNAME TO MATCH THE VM'S USER!!!):
+sudo chown <username>:<username> ~/honey-llm-logs/
+chmod 775 ~/honey-llm-logs/
+sudo chown honeypotlogs:honeypotlogs ~/honey-llm-logs/honeypot-logs/
+sudo chown honeypotlogs:honeypotlogs ~/honey-llm-logs/tcpdump-logs/
+sudo chmod 770 ~/honey-llm-logs/honeypot-logs/
+sudo chmod 2770 ~/honey-llm-logs/honeypot-logs/
+sudo chmod 770 ~/honey-llm-logs/honeypot-logs/in-out.log
+
+# Set specific permissions (REMEMBER TO CHANGE USERNAME TO MATCH THE VM'S USER!!!):
+sudo setfacl -m u:hpu:rwx,u:honeypotlogs:rwx,m:rwx /home/hpu/honey-llm-logs/
+sudo setfacl -d -m u:hpu:rwx,u:honeypotlogs:rwx,m:rwx /home/hpu/honey-llm-logs/
+sudo setfacl -m u:hpu:rwx,u:honeypotlogs:rwx,m:rwx /home/hpu/honey-llm-logs/honeypot-logs/
+sudo setfacl -d -m u:hpu:rwx,u:honeypotlogs:rwx,m:rwx /home/hpu/honey-llm-logs/honeypot-logs/
+sudo setfacl -m u:hpu:rwx,u:honeypotlogs:rwx,m:rwx /home/hpu/honey-llm-logs/tcpdump-logs/
+sudo setfacl -d -m u:hpu:rwx,u:honeypotlogs:rwx,m:rwx /home/hpu/honey-llm-logs/tcpdump-logs/
+sudo setfacl -m u:hpu:rwx,u:honeypotlogs:rwx,m:rwx /home/hpu/honey-llm-logs/honeypot-logs/in-out.log
+
